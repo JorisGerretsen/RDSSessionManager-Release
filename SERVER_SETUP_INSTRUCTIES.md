@@ -1,64 +1,64 @@
-# RDS Server Configuratie Handleiding (Eenmalig per RDS Host)
+# RDS Session Host Configuration Guide (One-Time Setup per Host)
 
-Volg onderstaande stappen op elke te beheren Windows Server 2025 RDS Session Host (bijv. `RDS-2025-01`, `RDS-2025-02`, etc.) om beheer mogelijk te maken voor helpdeskmedewerkers zonder administratorrechten.
+Follow these steps on each Windows Server 2025 / 2022 / 2019 RDS Session Host (e.g. `RDS-2025-01`, `RDS-2025-02`) to enable remote management for helpdesk staff without local administrator privileges.
 
 ---
 
-## Stap 1: RDP-Tcp Listener Permissies toekennen (PowerShell)
+## Step 1: Assign RDP-Tcp Listener Permissions (PowerShell)
 
-Open **PowerShell als Administrator** op de RDS-server en voer onderstaand script uit.
+Open **PowerShell as Administrator** on the RDS server and run the script below.
 
-> **Tip:** Pas de drie variabelen bovenaan aan naar de namen van uw eigen domein en groepen.
+> **Tip:** Adjust the three configuration variables at the top to match your Active Directory domain and group names.
 
 ```powershell
-# --- CONFIGURATIE (Aanpassen aan uw omgeving) ---
-$Domain = "JOUWDOMEIN.local"                  # Uw AD domeinnaam (bijv. CORP of CONTOSO.local)
-$OperatorGroup = "APP_RDS_Helpdesk_Operators"   # Groep met beheerbevoegdheden (Message, Disconnect, Logoff, Shadow)
-$ViewGroup = "APP_RDS_Helpdesk_View"            # Groep met uitsluitend lees-/kijkrechten
+# --- CONFIGURATION (Adjust to your environment) ---
+$Domain = "YOURDOMAIN.local"                  # Your AD domain name (e.g. CORP or CONTOSO.local)
+$OperatorGroup = "APP_RDS_Helpdesk_Operators" # Group with management rights (Message, Disconnect, Logoff, Shadow)
+$ViewGroup = "APP_RDS_Helpdesk_View"          # Group with view-only rights
 
-# 1. Haal de RDP-Tcp listener op via Terminal Services WMI
+# 1. Retrieve the RDP-Tcp listener via Terminal Services WMI
 $TSPermissions = Get-WmiObject -Namespace "root\cimv2\TerminalServices" -Class Win32_TSPermissionsSetting -Filter "TerminalName='RDP-Tcp'"
 
-# 2. Operators toevoegen (Level 2 = Volledig sessiebeheer: Bericht, Disconnect, Afmelden, Shadow)
+# 2. Add Operators (Level 2 = Full session control: Message, Disconnect, Logoff, Shadow)
 $resOp = $TSPermissions.AddAccount("$Domain\$OperatorGroup", 2)
 if ($resOp.ReturnValue -eq 0) {
-    Write-Host "[OK] Operators toegevoegd: $Domain\$OperatorGroup" -ForegroundColor Green
+    Write-Host "[OK] Operators added: $Domain\$OperatorGroup" -ForegroundColor Green
 } else {
-    Write-Warning "[FOUT] Toevoegen Operators mislukt. Code: $($resOp.ReturnValue)"
+    Write-Warning "[ERROR] Failed to add Operators. Code: $($resOp.ReturnValue)"
 }
 
-# 3. Viewers toevoegen (Level 1 = Alleen sessies en status inzien)
+# 3. Add Viewers (Level 1 = View sessions and status only)
 $resView = $TSPermissions.AddAccount("$Domain\$ViewGroup", 1)
 if ($resView.ReturnValue -eq 0) {
-    Write-Host "[OK] Viewers toegevoegd: $Domain\$ViewGroup" -ForegroundColor Green
+    Write-Host "[OK] Viewers added: $Domain\$ViewGroup" -ForegroundColor Green
 } else {
-    Write-Warning "[FOUT] Toevoegen Viewers mislukt. Code: $($resView.ReturnValue)"
+    Write-Warning "[ERROR] Failed to add Viewers. Code: $($resView.ReturnValue)"
 }
 ```
 
 ---
 
-## Stap 2: WMI CIMV2 Rechten toekennen (via `wmimgmt.msc`)
+## Step 2: Grant WMI CIMV2 Permissions (via `wmimgmt.msc`)
 
-1. Druk op de RDS-server op **Win + R**, typ `wmimgmt.msc` en druk op **Enter**.
-2. Klik met de rechtermuisknop op **WMI Control (Local)** en kies **Properties** (Eigenschappen).
-3. Ga naar het tabblad **Security**.
-4. Vouw de map `Root` open en selecteer de submap **`CIMV2`**.
-5. Klik onderin op de knop **Security** (Beveiliging).
-6. Klik op **Add...** en selecteer uw helpdesk-groepen (bijv. `$OperatorGroup` en `$ViewGroup`).
-7. Vink bij de machtigingen voor de groep de volgende drie opties aan:
-   - [x] **Execute Methods** (Methoden uitvoeren)
-   - [x] **Enable Account** (Account inschakelen)
-   - [x] **Remote Enable** (Op afstand inschakelen)
-8. Klik op de knop **Advanced** (Geavanceerd), selecteer de groep en klik op **Edit** (Bewerken):
-   - Stel **Applies to** (Van toepassing op) in op: **This namespace and subnamespaces**.
-9. Bevestig met **OK** om op te slaan.
+1. Press **Win + R** on the RDS server, type `wmimgmt.msc`, and press **Enter**.
+2. Right-click **WMI Control (Local)** and select **Properties**.
+3. Go to the **Security** tab.
+4. Expand `Root` and select the **`CIMV2`** subfolder.
+5. Click the **Security** button at the bottom.
+6. Click **Add...** and select your helpdesk groups (e.g. `$Domain\$OperatorGroup` and `$Domain\$ViewGroup`).
+7. Check the following three permissions:
+   - [x] **Execute Methods**
+   - [x] **Enable Account**
+   - [x] **Remote Enable** *(Crucial for remote queries)*
+8. Click **Advanced**, select the group, and click **Edit**:
+   - Set **Applies to** to: **This namespace and subnamespaces**.
+9. Click **OK** to save.
 
 ---
 
-## Stap 3: Firewall Openzetten (PowerShell)
+## Step 3: Open Firewall Rules (PowerShell)
 
-Voer dit uit in PowerShell op de RDS-server zodat de beheerpoorten bereikbaar zijn:
+Run the following command as Administrator to open the necessary Windows Defender Firewall rules:
 
 ```powershell
 Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
@@ -68,11 +68,9 @@ Enable-NetFirewallRule -DisplayGroup "Windows Management Instrumentation (WMI)"
 
 ---
 
-## Rollback (Optioneel)
+## Step 4: Verification
 
-Om de RDP-Tcp permissies op de RDS-server weer te herstellen naar standaard:
-
-```powershell
-$TS = Get-WmiObject -Namespace "root\cimv2\TerminalServices" -Class Win32_TSPermissionsSetting -Filter "TerminalName='RDP-Tcp'"
-$TS.RestoreDefaults()
-```
+Test the connection from the RDS Session Manager application:
+1. Open **Settings** -> **Managed Servers**.
+2. Click **Test Connection & Permissions**.
+3. Status should show: **Connected successfully (Online)**.
