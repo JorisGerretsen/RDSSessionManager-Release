@@ -4,6 +4,7 @@ Welcome to the official download repository for **RDS Session Manager**, a Windo
 
 ---
 
+
 ## 🚀 Quick Download
 
 | Version | Release Date | Download Link | Notes |
@@ -13,6 +14,9 @@ Welcome to the official download repository for **RDS Session Manager**, a Windo
 *(Previous versions will remain available in the [Releases Archive](https://github.com/JorisGerretsen/RDSSessionManager-Release/releases) whenever an update is released).*
 
 ---
+<img width="1908" height="1035" alt="image" src="https://github.com/user-attachments/assets/dcc14b13-c2f2-4563-8068-5a8b2083f1fb" />
+<img width="823" height="636" alt="image" src="https://github.com/user-attachments/assets/11f81690-5bce-4c4f-8e36-8d5c3bfbb6d7" />
+<img width="825" height="637" alt="image" src="https://github.com/user-attachments/assets/4d735b81-d001-48bb-9fd8-591db9c76401" />
 
 ## 💻 How to Install & Run
 
